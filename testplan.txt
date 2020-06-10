@@ -1,0 +1,22 @@
+Allen Zhang and Aryan Shah
+testplan.txt
+
+There were many different functions that we tested in our code. A list of functions and their respective tests are below.
+
+
+readfile: This function reads a file and returns a string with a null-terminated character at the end. This function was tested to handle very large sized files, small files, empty files, non-existant files. The types of files it read also varied, since it is reading text files, HuffmanCodebooks, and compressed hcz files
+
+AVLTree: An AVL tree was used to store tokens parsed from the buffer returned by the readme file. The nodes in the AVL tree can store the token, occurrences, and bitcode. It is sorted alphabetically, but d_insert can also be used to create an AVL tree sorted by bitcode values. To test the AVL tree, we tested creating an inserting a very large number of tokens, small number of tokens, empty tokens, and also printed out the AVL Tree to make sure that it was sorted and balanced properly.
+
+minHeap: The minHeap is used to determine the bitcode values for each of the nodes containing a token. We tested inserted a large number of nodes, small number of nodes, and no nodes. We also tested the heapify functions to make sure the heap structure was accurate. The minheap array was filled with sample tokens with sample occurrences, and the heapify function was called to make sure a minheap was created after multiple iterations.
+
+Building the codebook: Once the minHeap is constructed and the bitcodes are assign to nodes in the AVL Tree, we iterate through the AVL Tree, writing the token and bitcode of each node into a file called HuffmanCodebook. In order to test this, files of varying sizes were used to build the Codebook, and tokens were comprised of numbers, letters, and other special characters. The use of escape characters was also properly tested during this stage.
+
+Compressing the codebook: In order to compress files, we would call the readfile function and then iterate through the buffer, creating tokens delimited by spaces or new lines. A compress function takes the token as a parameter and returns the corresponding bitcode. We tested the compress function to make sure it returned the proper bitcodes for each token, and could handle unexpected cases (no token matching) without segfaulting. Test cases included large files with large codebooks with various special characters and escape characters. 
+
+Decompressing the codebook: Decompression is very dependent on how accurately the compressed file is called. The decompression was tested to make sure it only decompressed .hcz files, and was able to handle various errors such as missing file, no codebook, and errors with writing to a new file. The formatting of the output of the decompressed file was checked extensively to make sure there was no missing/extra data.
+
+
+Recursive flag: The recursive flag requires use to go to a directory and recursie perform an action on all the files. To test this, first we built a function to recursively iterate through a directory and print out its files and subdirectories. We tested it to ensure it could handle empty directory, nonexistent directories, etc. Then, instead of printing out a file, the program would either count the occurrences of its tokens, compress the file, or decompress the file based off the file type and command given. Once the build, decompress, and compress functions were tested, the recursive versions were also tested, with folders containing files and subfolders being compressed/decompressed.
+
+Helper methods: We also used various helper methods such as printing out trees/heaps to help us test our functions. We also used gdb extensively to debug and find segfaults.

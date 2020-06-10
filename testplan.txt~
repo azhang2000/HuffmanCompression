@@ -1,0 +1,7 @@
+There were many different functions that we tested in our code. A list of functions and their respective tests are below.
+
+
+readfile: This function reads a file and returns a string with a null-terminated character at the end. This function was tested to handle very large sized files, small files, empty files, non-existant files. The types of files it read also varied, since it is reading text files, HuffmanCodebooks, and compressed hcz files
+
+AVLTree: An AVL tree was used to store tokens parsed from the buffer returned by the readme file. The nodes in the AVL tree can store the token, occurrences, and bitcode. It is sorted alphabetically, but d_insert can also be used to create an AVL tree sorted by bitcode values. To test the AVL tree, we tested creating an inserting a very large number of tokens, small number of tokens, empty tokens, and also printed out the AVL Tree to make sure that it was sorted and balanced properly.
+

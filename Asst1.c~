@@ -1,0 +1,33 @@
+#include<stdlib.h>
+#include<stdio.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <string.h>
+void printDir(char * path){
+  struct dirent * dp;
+  DIR * dir = opendir(path);
+  if(dir!=NULL){
+    while((dp=readdir(dir))!=NULL){
+      if(strcmp(dp->d_name,".")!=0 && strcmp(dp->d_name,"..")!=0){
+
+      int subpathlen = strlen(path) + strlen(dp->d_name) +2 ;
+      char * subpath = (char *)malloc(sizeof(char)*subpathlen);
+      memset(subpath, '\0', subpathlen);
+      memcpy(subpath,path,strlen(path));
+      subpath[strlen(path)]='/';
+      strcat(subpath, dp->d_name);
+      printf("%s\n",subpath);
+      //printDir(subpath);
+      }
+    }
+    closedir(dir);
+	 }
+}
+
+
+int main (int argc, char ** argv){
+  printDir(argv[1]);
+
+  return 0;
+
+}

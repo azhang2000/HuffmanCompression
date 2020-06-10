@@ -1,0 +1,651 @@
+#include<stdlib.h>
+#include<stdio.h>
+#include<string.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+struct avlNode{                     // AVL Tree Node
+    char * data;                    // String token
+    char * bitCode;                 // Huffman Code representing token
+    int occ;                        // Number of token occurrences in file 
+    int height;                     
+    struct avlNode * left;          
+    struct avlNode * right;         
+};
+
+struct heapNode{                    // minHeap Node
+    char * data;                    // String token
+    int occ;                        // Number of token occurrences in file
+    struct heapNode * left;
+    struct heapNode * right;
+};
+
+struct avlNode * root;              // Global AVL Tree root node
+struct heapNode *  minHeap;         // Global minHeap which will be built into the Huffman Codebook
+char * HuffmanCodebook = "\\\n";             // String of Huffman Codebook to be inserted into a file
+int heapSize = 0;                   // Size of minHeap determined by size of AVL Tree
+int heapIndex = 0;                  // Index used to fill minHeap, might not need 
+
+// Helper methods for AVL Tree Balancing
+int oppSign(int N1, int N2){
+    return (N1 > 0 && N2 < 0) || (N1 < 0 && N2 > 0) ? 1 : 0;
+}
+
+int height(struct avlNode * root){
+    return root == NULL ? 0 : root->height;
+}
+
+int balance(struct avlNode * root){
+    return root == NULL ? 0 : height(root->right) - height(root->left);
+}
+
+int newHeight(struct avlNode * root){
+    return root == NULL ? 0 : (height(root->right) > height(root->left) ? height(root->right)+1 : height(root->left)+1);
+}
+
+struct avlNode * newNode(char * data, char * bitCode){
+    struct avlNode * newNode = (struct avlNode *)malloc(sizeof(struct avlNode));
+    newNode->data = data;
+    newNode->bitCode = bitCode;
+    newNode->occ = 1;
+    newNode->height = 0;
+    newNode->left = NULL;
+    newNode->right = NULL;
+    heapSize++;
+    return newNode;
+}
+
+struct avlNode * rebalance(struct avlNode * root){
+    struct avlNode * child = balance(root) > 0 ? root->right : root->left;
+    if (oppSign(balance(child),balance(root))){
+        child = rebalance(child);
+    }
+    if (balance(root) > 0){
+        root->right = child->left;
+        root->height = newHeight(root);
+        child->left = root;
+    }
+    else{
+        root->left = child->right;
+        root->height = newHeight(root);
+        child->right = root;
+    }
+    child->height = newHeight(child);
+    return child;
+}
+// AVL Tree insert
+struct avlNode * insert(struct avlNode * root, char * data, char * bitCode){
+    if (root == NULL){
+        return newNode(data, bitCode);
+        heapSize++;
+    }
+
+    if(strcmp(data, root->data)>0){
+        root->right = insert(root->right, data, bitCode);
+    }
+    else if(strcmp(data,root->data)<0){
+        root->left = insert(root->left, data, bitCode);
+    }
+    else{
+        root->occ++;
+        return root;
+    }
+
+    root->height = newHeight(root);
+    return (balance(root)>1 || balance(root)<-1) ? rebalance(root) : root;
+}
+
+
+// Function used to update bitCode for each token in tree after Huffman Codebook is built
+void updateBit(struct avlNode * root, char * data, char * bitCode){
+    if (root == NULL){
+      printf("Error: Node not found");
+        return;
+    }
+
+    if(strcmp(data, root->data)>0){
+      updateBit(root->right, data, bitCode);
+    }
+    else if(strcmp(data,root->data)<0){
+      updateBit(root->left, data, bitCode);
+    }
+    else{
+      root->bitCode = (char *)malloc(256*sizeof(char));
+      root->bitCode = bitCode;
+    }
+    return;
+}
+// Function used to compress tokens into their bitCode
+char * compress(struct avlNode * root, char * data){
+    if (root == NULL){
+        printf("Error: Node not found");
+        return NULL;
+    }
+
+    if(strcmp(data, root->data)>0){
+        return compress(root->right, data, bitCode);
+    }
+    else if(strcmp(data,root->data)<0){
+        return compress(root->left, data, bitCode);
+    }
+    else{
+        return root->bitCode;
+    }
+}
+// minHeap insert
+void fillHeap(char * data, int occ){
+    minHeap[heapIndex].data = data;
+    minHeap[heapIndex].occ = occ;
+    heapIndex++;
+}
+
+void fillHeapFromTree (struct avlNode * root){
+    if (root == NULL){
+        return;
+    }
+    fillHeapFromTree(root->left);
+    fillHeapFromTree(root->right);
+    fillHeap(root->data, root->occ);
+}
+
+void freeAVL(struct avlNode * root){
+    if (root == NULL){
+        return;
+    }
+    freeAVL(root->left);
+    freeAVL(root->right);
+    if (root->data != NULL){
+        free(root->data);
+    }
+    if (root->bitCode != NULL){
+        free(root->bitCode);
+    }
+    free(root);
+}
+// Helper functions for minHeap
+int getLeftChildIndex(int parentIndex){
+    return 2 * parentIndex + 1;
+}
+
+int getRightChildIndex(int parentIndex){
+    return 2 * parentIndex + 2;
+}
+
+int getParentIndex(int childIndex) {
+    return (childIndex - 1) / 2;
+}
+
+int hasLeftChild(int index){
+    return getLeftChildIndex(index) < heapSize;
+}
+
+int hasRightChild(int index){
+    return getRightChildIndex(index) < heapSize;
+}
+
+int hasParent(int index){
+    return getParentIndex(index) >= 0;
+}
+
+struct heapNode leftChild(int index){
+    return minHeap[getLeftChildIndex(index)];
+}
+
+struct heapNode rightChild(int index){
+    return minHeap[getRightChildIndex(index)];
+}
+
+struct heapNode parent(int index){
+    return minHeap[getParentIndex(index)];
+}
+
+void swap(int indexOne, int indexTwo){
+    struct heapNode temp = minHeap[indexOne];
+    minHeap[indexOne] = minHeap[indexTwo];
+    minHeap[indexTwo] = temp;
+}
+
+void heapifyUp(){
+    int index = heapSize - 1;
+    while(hasParent(index) && parent(index).occ > minHeap[index].occ){
+        swap(getParentIndex(index),index);
+        index = getParentIndex(index);
+    }
+}
+
+void heapifyDown(int index){
+    while(hasLeftChild(index)){
+        int minChildIndex = getLeftChildIndex(index);
+        if(hasRightChild(index) && rightChild(index).occ < leftChild(index).occ){
+            minChildIndex = getRightChildIndex(index);
+        }
+        if (minHeap[index].occ < minHeap[minChildIndex].occ){
+            break;
+        }
+        else{
+            swap(index, minChildIndex);
+        }
+        index = minChildIndex;
+    }
+}
+
+void heapify(){
+    int index = heapSize - 1;
+    if (hasParent(index)){
+        index = getParentIndex(index);
+    }
+    else{
+        return;
+    }
+    while (index >= 0){
+        heapifyDown(index);
+        index--;
+    }
+}
+
+struct heapNode pop(){
+    struct heapNode min = minHeap[0];
+    swap(0,heapSize-1);
+    heapSize--;
+    heapifyDown(0);
+    return min;
+}
+
+void add(struct heapNode newNode){
+    minHeap[heapSize] = newNode;
+    heapSize++;
+    heapifyUp();
+}
+void buildfromCodebook(char * codebook){
+
+      int i = 0;
+      int start = 0;
+      while(codebook[i]!='\0'){
+	char * bitcode;
+	if(codebook[i]=='\t')
+	  {
+	    int length = i-start;
+	    bitcode = (char *)malloc(sizeof(char)*(length+1));
+            int p =0;
+            for(p =0; p<length;p++){
+                bitcode[p]=codebook[start+p];
+	        }
+           bitcode[length]='\0';
+           start=i+1;
+	  }
+	if(codebook[i]=='\n'){
+	  int length = i-start;
+	  char * token = (char *)malloc(sizeof(char)*(length+1));
+	  int p = 0;
+	  for(p =0; p<length;p++){
+                token[p]=codebook[start+p];
+	        }
+	  insert(root,token,bitcode);
+	  start = i+1;
+	}
+	i++;
+      }
+
+}
+
+// Function used to transform minHeap arr into Huffman Tree structure
+void buildHuffmanTree(){
+    while (heapSize>1){
+        struct heapNode * newNode = (struct heapNode *)malloc(sizeof(struct heapNode));
+        struct heapNode newLeftChild = pop();
+        struct heapNode newRightChild = pop();
+        newNode->data = NULL;
+        newNode->left = (struct heapNode *)malloc(sizeof(struct heapNode));
+        newNode->left->data = newLeftChild.data;
+        newNode->left->occ = newLeftChild.occ;
+        newNode->left->left = newLeftChild.left;
+        newNode->left->right = newLeftChild.right;
+        newNode->right = (struct heapNode *)malloc(sizeof(struct heapNode));
+        newNode->right->data = newRightChild.data;
+        newNode->right->occ = newRightChild.occ;
+        newNode->right->left = newRightChild.left;
+        newNode->right->right = newRightChild.right;
+        newNode->occ = newNode->left->occ + newNode->right->occ;
+        add(*newNode);
+    }
+}
+// Function used to traverse Huffman Tree and assign bitCodes to each token ( 0 for left, 1 for right )
+void buildBitCode(struct heapNode * root, struct avlNode * tree, char * bitCode, char bit){
+    if(root==NULL){
+        return;
+    }
+    if(bit != '\0'){
+      strncat(bitCode, bit, 1);
+    }
+    if (root->data != NULL){
+      updateBit(tree, root->data, bitCode);
+      return;
+    }
+    
+    printTree(root->left, bitCode, '0');
+    printTree(root->right, bitCode, '1');
+    return;
+}
+
+void freeHeap(struct heapNode * root){
+    if (root==NULL){
+        return;
+    }
+    freeHeap(root->left);
+    freeHeap(root->right);
+    if (root->data!=NULL){
+        free(root->data);
+    }
+    free(root);
+}
+
+void fillCodebook(struct avlNode * root){
+    if (root == NULL){
+        return;
+    }
+    fillCodebook(root->left);
+    fillCodebook(root->right);
+    strcat(HuffmanCodebook, root->bitCode);
+    strncat(HuffmanCodebook, '\t', 1);
+    strcat(HuffmanCodebook, root->data);
+    strncat(HuffmanCodebook, '\n', 1);
+}
+// Function used to decompress bitCode into corresponding tokens by traversing through Huffman Tree
+char * decompress(struct heapNode * root, char * bitCode, int index){
+    if (bitCode[index]=='\0'){
+        return root->data;
+    }
+    else if (bitCode[index]=='0'){
+        return decompress(root->left, bitCode, index+1);
+    }
+    else if (bitCode[index]=='1'){
+        return decompress(root->right, bitCode, index+1);
+    }
+    else {
+        printf("Fatal Error in Decompression\n");
+        return NULL;
+    }
+}
+
+char * readfile(int fd){		//reads file and returns a string of entire file
+    char * buf = malloc(300*sizeof(char));
+    memset(buf,'\0',300);
+    int bsize = 300;
+    int index = 0;
+    int status= 0;
+    do{
+        status = read(fd, buf + index, 1);
+        index += status;
+        if(index>=bsize-1)
+        {
+            char * temp =(char *) malloc(bsize*sizeof(char));
+            memcpy(temp, buf, bsize);
+            free(buf);
+            buf = (char *)malloc(bsize*2*sizeof(char));
+            memset(buf,'\0',bsize*2);
+            memcpy(buf,temp,bsize);
+            free(temp);
+            bsize=bsize*2;
+        }
+    }while(status>0);
+
+    return buf;
+}
+
+void countOccurrences(char * buf){ //takes buffer string and looks for tokens delimited by space, then calls insert method for each token
+    int i =0;
+    int start=0;
+ 
+    do{
+        if(buf[i]==' ' || buf[i]=='\n' || buf[i]=='\0'){
+            int length = i-start;
+            if(buf[i]==' '){
+	            char * token = (char *)malloc(sizeof(char)*2);
+	            token[1]='\0';
+	            token[0]=' ';
+                insert(root, token, NULL);
+	        }
+            else if(buf[i]=='\n'){
+	            char * token = (char *)malloc(sizeof(char)*2);
+	            token[1]='\0';
+	            token[0]='\n';
+	            insert(root, token, NULL);
+	        }
+            if(length>0){
+                char * word=(char * )malloc((length+1)*sizeof(char));
+                int p =0;
+                for(p =0; p<length;p++){
+                    word[p]=buf[start+p];
+                }
+                //printf("%s\n",word);
+                word[length]='\0';
+                insert(root, word, NULL);
+            }
+            start=i+1;
+        }
+        i++;
+    }while(buf[i-1]!='\0');
+}
+ 
+void recurseDir(char * flag, char * path){  //if -R flag exists, will recursively iterate through directory and subdirectory and call functions based on flags
+    struct dirent * dp;
+    DIR * dir = opendir(path);
+
+    if(dir!=NULL){
+      readdir(dir);
+      readdir(dir);
+        while((dp=readdir(dir))!=NULL){
+                int subpathlen = strlen(path) + strlen(dp->d_name) +2 ;
+                char * subpath = (char *)malloc(sizeof(char)*subpathlen);
+                memset(subpath, '\0', subpathlen);
+                memcpy(subpath,path,strlen(path));
+                subpath[strlen(path)]='/';
+                strcat(subpath, dp->d_name);
+                //printf("%s\n",subpath);
+		if(dp->d_type==DT_REG){
+                if(strcmp(flag,"-b")==0){
+                    int fd = open(subpath,O_RDONLY);
+                    if(fd!=-1){
+	                    char * filecontents = readfile(fd);
+	                    countOccurrences(filecontents);
+                        minHeap = (struct heapNode *)malloc(heapSize * sizeof(struct heapNode));
+                        fillHeapFromTree(root);        
+                        heapify();
+                        buildHuffmanTree();
+                        char bitCode[] = "";
+                        char bit = '\0';
+                        buildBitCode(minHeap, root, bitCode, bit);
+                        fillCodebook();
+                        strncat(HuffmanCodebook, '\n');
+                        int fd2 = open("./HuffmanCodebook",O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+			write(fd2,HuffmanCodebook,strlen(HuffmanCodebook)+1);
+	                free(filecontents);
+                        free(bitCode);
+                        freeAVL(root);
+                        freeHeap(minHeap);
+                        free(HuffmanCodebook);
+                        HuffmanCodebook = "\\\n";
+                        heapSize = 0;
+                        heapIndex = 0;
+                    }
+                }
+
+		}
+                if(dp->d_type == DT_DIR){
+		recurseDir(flag,subpath);
+		}
+            }          
+    
+        closedir(dir);
+    }
+}
+
+void compressAll(char * buf, int fd){
+  int i = 0;
+  do{
+    if(buf[i]==' ' || buf[i]=='\n' || buf[i]=='\0'){
+            int length = i-start;
+            if(buf[i]==' '){
+	      char * bcode = compress(root," ");
+	      write(fd,bcode,strlen(bcode)+1);
+	        }
+            else if(buf[i]=='\n'){
+	      char * bcode = compress(root,"\n");
+	      write(fd,bcode,strlen(bcode)+1);
+	    }
+            if(length>0){
+                char * word=(char * )malloc((length+1)*sizeof(char));
+                int p =0;
+                for(p =0; p<length;p++){
+                    word[p]=buf[start+p];
+                }
+                word[length]='\0';
+                char * bcode = compress(root,word);
+		write(fd,bcode,length+1);
+            }
+            start=i+1;
+        }
+    i ++;
+  }while(uncompressed[i-1]!='\0');
+}
+void uncompressAll(int fdread, int fdwrite){
+    char * buf = malloc(300*sizeof(char));
+    memset(buf,'\0',300);
+    int bsize = 300;
+    int index = 0;
+    int status= 0;
+    do{
+        status = read(fdread, buf + index, 1);
+        index += status;
+        if(index>=bsize-1)
+        {
+            char * temp =(char *) malloc(bsize*sizeof(char));
+            memcpy(temp, buf, bsize);
+            free(buf);
+            buf = (char *)malloc(bsize*2*sizeof(char));
+            memset(buf,'\0',bsize*2);
+            memcpy(buf,temp,bsize);
+            free(temp);
+            bsize=bsize*2;
+        }
+    }while(status>0);
+    
+    int filesize = index;
+    int i = 0;
+    int start = 0;
+    while(i<filesize){
+      if(buf[i]=='\0'){
+            int length = i-start;
+            if(length>0){
+                char * bcode=(char * )malloc((length+1)*sizeof(char));
+                int p =0;
+                for(p =0; p<length;p++){
+                    bcode[p]=buf[start+p];
+                }
+                bcode[length]='\0';
+                char * token = decompress(root,bcode,0);
+		write(fdwrite,token,length+1);
+            }
+            start=i+1;
+      }
+      i++;
+    }
+
+}
+ 
+  
+int main (int argc, char ** argv){
+    if(strcmp(argv[1],"-R")==0){
+      if(strcmp(argv[2],"-c")==0 || strcmp(argv[2],"-d")==0){
+       int fd2 = open(argv[4],O_RDONLY);
+      if(fd2 == -1){
+	printf("Fatal Error: Codebook not found\n");
+	return 0;
+      }
+      char * codebook = readfile(fd2);
+      buildfromCodebook(codebook);
+      }
+      recurseDir(argv[2],argv[3]);
+    }
+
+    else if(strcmp(argv[1],"-b")==0){
+        int fd = open(argv[2],O_RDONLY);
+
+        if(fd==-1){
+            printf("Fatal Error: File does not exist\n");
+            return 0;
+        }
+        char * filecontents = readfile(fd);
+        countOccurrences(filecontents);
+        minHeap = (struct heapNode *)malloc(heapSize * sizeof(struct heapNode));
+        fillHeapFromTree(root);
+        heapify();
+        buildHuffmanTree();
+        char bitCode[] = "";
+        char bit = '\0';
+        buildBitCode(minHeap, root, bitCode, bit);
+	int fd2 = open("./HuffmanCodebook",O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+			write(fd2,HuffmanCodebook,strlen(HuffmanCodebook));
+        free(bitCode);
+        free(filecontents);
+        freeAVL(root);
+        freeHeap(minHeap);
+        free(HuffmanCodebook);
+        HuffmanCodebook = "\\\n";
+        heapSize = 0;
+        heapIndex = 0;
+    }
+    else if (strcmp(argv[1],"-c")==0){
+      int fd = open(argv[2], O_RDONLY);
+      int fd2 = open(argv[3],O_RDONLY);
+
+      if(fd==-1){
+	printf("Fatal Error: File not found\n");
+	return 0;
+      }
+      if(fd2 == -1){
+	printf("Fatal Error: Codebook not found\n");
+	return 0;
+      }
+      char * uncompressed = readfile(fd);
+      char * codebook = readfile(fd2);
+      buildfromCodebook(codebook);
+      char * filename = strcat(argv[2],".hcz");
+      int fd3 =  open(filename, O_RDWR|O_CREAT|O_APPEND, S_IRUSR | S_IWUSR); 
+      compressAll(uncompressed,fd3);
+      free(codebook);
+      free(uncompressed);
+    }
+
+    else if(strcmp(argv[1],"-d")==0){
+      int fd = open(argv[2], O_RDONLY);
+      int fd2 = open(argv[3],O_RDONLY);
+
+      if(fd==-1){
+	printf("Fatal Error: File not found\n");
+	return 0;
+      }
+      if(fd2 == -1){
+	printf("Fatal Error: Codebook not found\n");
+	return 0;
+      }
+      char * codebook = readfile(fd2);
+      buildfromCodebook(codebook);
+      char * filename = strcat(argv[2],".hcz");
+      int fd3 =  open(filename, O_RDWR|O_CREAT|O_APPEND, S_IRUSR | S_IWUSR); 
+      uncompressAll(fd,fd3);
+      free(codebook);
+      free(compressed);
+     
+    }
+    else
+      {
+	printf("Fatal Error: Not valid flag\n");
+
+      }
+    //int fd = open(filename, O_RDWR|O_CREAT, S_IRUSR | S_IWUSR);
+    
+    return 0;
+}

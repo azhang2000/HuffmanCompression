@@ -1,0 +1,93 @@
+#include<stdlib.h>
+#include<stdio.h>
+#include<string.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+
+int main(int argc, char ** argv){
+  int fd = open("./test.txt", O_WRONLY | O_CREAT | O_APPEND, 00600);
+  
+  char * test = "Hello";
+
+  char * test2 = "World";
+  
+  write(fd,test,6);
+  write(fd,test2,6);
+  int fd2 =  open("./test.txt", O_RDONLY | O_CREAT, 00600);
+  char * read1 = malloc(sizeof(char)*13);
+  read(fd2,read1,12);
+  read1[12]='\0';
+  printf("%s\n",read1);
+  int i =0;
+  while(i<12){
+    printf("%c\n",read1[i]);
+    i++;
+  }
+  printf("%d\n",strlen(read1)); 
+return 0;
+}
+#include<stdlib.h>
+#include<stdio.h>
+#include<string.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+
+int main(int argc, char ** argv){
+  int fd = open("./test.txt", O_WRONLY | O_CREAT | O_APPEND, 00600);
+  
+  char * test = "Hello";
+
+  char * test2 = "World";
+  
+  write(fd,test,6);
+  write(fd,test2,6);
+  int fd2 =  open("./test.txt", O_RDONLY | O_CREAT, 00600);
+  char * read1 = malloc(sizeof(char)*13);
+  read(fd2,read1,12);
+  
+  
+  int i =0;
+  while(i<12){
+    
+    i++;
+  }
+   
+return 0;
+}
+#include<stdlib.h>
+#include<stdio.h>
+#include<string.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+
+int main(int argc, char ** argv){
+  int fd = open("./test.txt", O_WRONLY | O_CREAT | O_APPEND, 00600);
+  
+  char * test = "Hello";
+
+  char * test2 = "World";
+  
+  write(fd,test,6);
+  write(fd,test2,6);
+  int fd2 =  open("./test.txt", O_RDONLY | O_CREAT, 00600);
+  char * read1 = malloc(sizeof(char)*13);
+  read(fd2,read1,12);
+  
+  
+  int i =0;
+  while(i<12){
+    
+    i++;
+  }
+   
+return 0;
+}
